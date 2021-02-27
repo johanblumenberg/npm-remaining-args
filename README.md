@@ -120,7 +120,7 @@ first  last
 $ npm run start -- --arg1 x --my-arg "Hello World" --arg2 y
 first --my-arg Hello World last
 
-$ npm run start -- --arg1 x --my-arg --arg2 y
+$ npm run start -- --arg1 x --arg2 y
 first --my-arg default-value last
 
 $ npm run start -- --arg1 x --my-arg --arg2 y
