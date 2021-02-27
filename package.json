@@ -8,9 +8,14 @@
     "printenv": "env && echo"
   },
   "bin": {
-    "npm-remaining-args": "index.js",
-    "npm-no-args": "eat.js"
+    "npm-remaining-args": "src/npm-remaining-args.js",
+    "npm-arg": "src/npm-arg.js",
+    "npm-fwd": "src/npm-fwd.js",
+    "npm-no-args": "src/npm-no-args.js"
   },
+  "files": [
+    "src"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/johanblumenberg/npm-remaining-args.git"

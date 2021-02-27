@@ -49,7 +49,7 @@ describe('npm-remaining-args', function() {
     let testdir;
 
     before(() => {
-        tempdir = fs.mkdtempSync('./temp-');
+        tempdir = fs.mkdtempSync('/tmp/npm-remaining-args-test-');
     });
 
     after(() => {
@@ -58,6 +58,10 @@ describe('npm-remaining-args', function() {
 
     beforeEach(() => {
         testdir = fs.mkdtempSync(path.join(tempdir, 'test-'));
+    });
+
+    afterEach(() => {
+        fs.removeSync(testdir);
     });
 
     for (let target of targets) {
@@ -103,6 +107,148 @@ describe('npm-remaining-args', function() {
                 });
                 const output = execute(target.runcmd('cmd', ['hello', 'world']));
                 expect(output).toEqual(['started', 'hello world', 'done']);
+            });
+
+            it('npm-arg should pick a single arg', () => {
+                createPackage({
+                    scripts: {
+                        cmd: 'echo started; echo $(npm-arg --my-first-arg) && echo done && npm-no-args'
+                    }
+                });
+                const output = execute(target.runcmd('cmd', ['--my-first-arg', 'hello', '--my-second-arg', 'world']));
+                expect(output).toEqual(['started', 'hello', 'done']);
+            });
+
+            it('npm-fwd should forward a single arg', () => {
+                createPackage({
+                    scripts: {
+                        cmd: 'echo started; echo $(npm-fwd --my-first-arg) && echo done && npm-no-args'
+                    }
+                });
+                const output = execute(target.runcmd('cmd', ['--my-first-arg', 'hello', '--my-second-arg', 'world']));
+                expect(output).toEqual(['started', '--my-first-arg hello', 'done']);
+            });
+
+            it('npm-arg should pick a single arg given with equals sign', () => {
+                createPackage({
+                    scripts: {
+                        cmd: 'echo started; echo $(npm-arg --my-first-arg) && echo done && npm-no-args'
+                    }
+                });
+                const output = execute(target.runcmd('cmd', ['--my-first-arg=hello', '--my-second-arg', 'world']));
+                expect(output).toEqual(['started', 'hello', 'done']);
+            });
+
+            it('npm-fwd should forward a single arg given with equals sign', () => {
+                createPackage({
+                    scripts: {
+                        cmd: 'echo started; echo $(npm-fwd --my-first-arg) && echo done && npm-no-args'
+                    }
+                });
+                const output = execute(target.runcmd('cmd', ['--my-first-arg=hello', '--my-second-arg', 'world']));
+                expect(output).toEqual(['started', '--my-first-arg=hello', 'done']);
+            });
+
+            it('npm-arg should pick a single empty arg given with equals sign', () => {
+                createPackage({
+                    scripts: {
+                        cmd: 'echo started; echo $(npm-arg --my-first-arg) && echo done && npm-no-args'
+                    }
+                });
+                const output = execute(target.runcmd('cmd', ['--my-first-arg=', 'hello']));
+                expect(output).toEqual(['started', 'done']);
+            });
+
+            it('npm-fwd should forward a single empty arg given with equals sign', () => {
+                createPackage({
+                    scripts: {
+                        cmd: 'echo started; echo $(npm-fwd --my-first-arg) && echo done && npm-no-args'
+                    }
+                });
+                const output = execute(target.runcmd('cmd', ['--my-first-arg=', 'hello']));
+                expect(output).toEqual(['started', '--my-first-arg=', 'done']);
+            });
+
+            it('npm-arg should pick a single empty arg when next value starts with -', () => {
+                createPackage({
+                    scripts: {
+                        cmd: 'echo started; echo $(npm-arg --my-first-arg) && echo done && npm-no-args'
+                    }
+                });
+                const output = execute(target.runcmd('cmd', ['--my-first-arg', '--my-second-arg', 'world']));
+                expect(output).toEqual(['started', 'done']);
+            });
+
+            it('npm-fwd should forward a single empty arg when next value starts with -', () => {
+                createPackage({
+                    scripts: {
+                        cmd: 'echo started; echo $(npm-fwd --my-first-arg) && echo done && npm-no-args'
+                    }
+                });
+                const output = execute(target.runcmd('cmd', ['--my-first-arg', '--my-second-arg', 'world']));
+                expect(output).toEqual(['started', '--my-first-arg', 'done']);
+            });
+
+            describe('default values', () => {
+                it('npm-arg should return a default arg', () => {
+                    createPackage({
+                        scripts: {
+                            cmd: 'echo started; echo $(npm-arg --my-first-arg:default-value) && echo done && npm-no-args'
+                        }
+                    });
+                    const output = execute(target.runcmd('cmd', ['--my-second-arg', 'world']));
+                    expect(output).toEqual(['started', 'default-value', 'done']);
+                });
+    
+                it('npm-fwd should forward a default arg', () => {
+                    createPackage({
+                        scripts: {
+                            cmd: 'echo started; echo $(npm-fwd --my-first-arg:default-value) && echo done && npm-no-args'
+                        }
+                    });
+                    const output = execute(target.runcmd('cmd', ['--my-second-arg', 'world']));
+                    expect(output).toEqual(['started', '--my-first-arg default-value', 'done']);
+                });
+
+                it('npm-arg should not use the default value if an arg is given', () => {
+                    createPackage({
+                        scripts: {
+                            cmd: 'echo started; echo $(npm-arg --my-first-arg:default-value) && echo done && npm-no-args'
+                        }
+                    });
+                    const output = execute(target.runcmd('cmd', ['--my-first-arg', 'hello', '--my-second-arg', 'world']));
+                    expect(output).toEqual(['started', 'hello', 'done']);
+                });
+
+                it('npm-fwd should fnot use the default value if an arg is given', () => {
+                    createPackage({
+                        scripts: {
+                            cmd: 'echo started; echo $(npm-fwd --my-first-arg:default-value) && echo done && npm-no-args'
+                        }
+                    });
+                    const output = execute(target.runcmd('cmd', ['--my-first-arg', 'hello', '--my-second-arg', 'world']));
+                    expect(output).toEqual(['started', '--my-first-arg hello', 'done']);
+                });
+
+                it('npm-arg should not use the default value if an empty arg is given', () => {
+                    createPackage({
+                        scripts: {
+                            cmd: 'echo started; echo $(npm-arg --my-first-arg:default-value) && echo done && npm-no-args'
+                        }
+                    });
+                    const output = execute(target.runcmd('cmd', ['--my-first-arg', '--my-second-arg', 'world']));
+                    expect(output).toEqual(['started', 'done']);
+                });
+
+                it('npm-fwd should fnot use the default value if an empty arg is given', () => {
+                    createPackage({
+                        scripts: {
+                            cmd: 'echo started; echo $(npm-fwd --my-first-arg:default-value) && echo done && npm-no-args'
+                        }
+                    });
+                    const output = execute(target.runcmd('cmd', ['--my-first-arg', '--my-second-arg', 'world']));
+                    expect(output).toEqual(['started', '--my-first-arg', 'done']);
+                });
             });
         });
     }
