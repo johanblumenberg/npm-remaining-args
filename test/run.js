@@ -3,6 +3,45 @@ const fs = require('fs-extra');
 const path = require('path');
 const cp = require('child_process');
 
+class Target {
+    constructor(cmd, run, dashes) {
+        this.cmd = cmd;
+        this.run = run;
+        this.dashes = dashes;
+    }
+
+    title() {
+        return this.runcmd(' ', [' ']);
+    }
+
+    install() {
+        if (this.cmd === 'npm') {
+            return `${this.cmd} install --no-package-lock`;
+        } else {
+            return `${this.cmd} install`;
+        }
+    }
+
+    runcmd(cmd, args) {
+        let result = this.cmd;
+        if (this.run) result += ' run';
+        result += ` ${cmd}`;
+        if (args && args.length) {
+            if (this.dashes) result += ' --';
+            result += ' ';
+            result += args.join(' ');
+        }
+        return result;
+    }
+}
+
+const targets = [
+    new Target('npm', true, true),
+    new Target('yarn', false, false),
+    new Target('yarn', true, false),
+    new Target('yarn', false, true),
+];
+
 describe('npm-remaining-args', function() {
     this.timeout(5000);
 
@@ -21,13 +60,24 @@ describe('npm-remaining-args', function() {
         testdir = fs.mkdtempSync(path.join(tempdir, 'test-'));
     });
 
-    for (let cmd of ['npm']) {
-        describe(cmd, () => {
+    for (let target of targets) {
+        describe(target.title(), () => {
+
             function execute(cmd) {
                 const output = cp.execSync(cmd, {
                     cwd: testdir,
+                    env: {
+                        PATH: process.env.PATH,
+                    },
                 }).toString();
-                return output.split('\n').filter(l => !l.startsWith('> ')).filter(l => l.trim().length > 0);
+
+                return output
+                    .split('\n')
+                    .filter(l => !l.startsWith('> '))
+                    .filter(l => !l.startsWith('$ '))
+                    .filter(l => !l.startsWith('yarn run v'))
+                    .filter(l => !l.startsWith('Done in '))
+                    .filter(l => l.trim().length > 0);
             }
 
             function createPackage(pkg) {
@@ -36,12 +86,13 @@ describe('npm-remaining-args', function() {
                     version: '1.0.0',
                     description: 'test package',
                     license: 'UNLICENSED',
+                    repository: {},
                     dependencies: {
                         "npm-remaining-args": process.cwd(),
                     },
                     ...pkg,
                 });
-                execute(`${cmd} install`);
+                execute(target.install());
             }
             
             it('npm-remaining-args should add remaining args', () => {
@@ -50,7 +101,7 @@ describe('npm-remaining-args', function() {
                         cmd: 'echo started; echo $(npm-remaining-args) && echo done && npm-no-args'
                     }
                 });
-                const output = execute(`${cmd} run cmd -- hello world`);
+                const output = execute(target.runcmd('cmd', ['hello', 'world']));
                 expect(output).toEqual(['started', 'hello world', 'done']);
             });
         });

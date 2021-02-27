@@ -4,7 +4,8 @@
   "description": "Simplify use of remaining args in npm scripts",
   "main": "index.js",
   "scripts": {
-    "test": "mocha test/*.js"
+    "test": "mocha test/*.js",
+    "printenv": "env && echo"
   },
   "bin": {
     "npm-remaining-args": "index.js",
